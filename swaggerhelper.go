@@ -27,6 +27,17 @@ func getSwaggerUIFiles() http.FileSystem {
 	return http.FS(fsys)
 }
 
+const (
+	banner = `
+
+	╔══╗─────────────╔╗╔╗
+	║══╬╦╦╦═╗╔═╦═╦═╦╦╣╚╝╠═╦╗╔═╦═╦╦╗
+	╠══║║║║╬╚╣╬║╬║╩╣╔╣╔╗║╩╣╚╣╬║╩╣╔╝
+	╚══╩══╩══╬╗╠╗╠═╩╝╚╝╚╩═╩═╣╔╩═╩╝
+	─────────╚═╩═╝──────────╚╝
+`
+)
+
 func main() {
 	parser := argparse.NewParser("SwaggerHelper", "")
 	var listenAddress *string = parser.String("L", "listen", &argparse.Options{Required: false, Default: "127.0.0.1:1323", Help: "bind address."})
@@ -34,35 +45,41 @@ func main() {
 	var serverRoot *string = parser.String("S", "serverroot", &argparse.Options{Required: false, Default: "", Help: "server override."})
 	err := parser.Parse(os.Args)
 	exit_on_error("[PARSER ERROR]", err)
-
+	useServerOverride := *serverRoot != ""
 	e := echo.New()
+	e.HideBanner = true
 	e.GET("/swagger.json", func(c echo.Context) error {
 		data := getContent(*swaggerPath)
-		result, _ := jsonparser.Set(data, []byte("\"\""), "host")
-		final, _ := jsonparser.Set(result, []byte("\"/backend-api\""), "basePath")
-		return c.JSONBlob(http.StatusOK, final)
+		if useServerOverride {
+			result, _ := jsonparser.Set(data, []byte("\"\""), "host")
+			final, _ := jsonparser.Set(result, []byte("\"/backend-api\""), "basePath")
+			return c.JSONBlob(http.StatusOK, final)
+		}
+		return c.JSONBlob(http.StatusOK, data)
 	})
-
-	backend, err := url.Parse(*serverRoot)
-	if err != nil {
-		e.Logger.Fatal(err)
-	}
-	targets := []*middleware.ProxyTarget{
-		{
-			URL: backend,
+	if useServerOverride {
+		backend, err := url.Parse(*serverRoot)
+		if err != nil {
+			e.Logger.Fatal(err)
+		}
+		targets := []*middleware.ProxyTarget{
+			{
+				URL: backend,
+			},
+		}
+		proxyBackend := e.Group("/backend-api")
+		proxyBackend.Use(middleware.ProxyWithConfig(middleware.ProxyConfig{
+			Balancer: middleware.NewRoundRobinBalancer(targets),
+			Rewrite: map[string]string{
+				"^/backend-api/*": "/$1",
+			},
 		},
+		))
 	}
-	proxyBackend := e.Group("/backend-api")
-	proxyBackend.Use(middleware.ProxyWithConfig(middleware.ProxyConfig{
-		Balancer: middleware.NewRoundRobinBalancer(targets),
-		Rewrite: map[string]string{
-			"^/backend-api/*": "/$1",
-		},
-	},
-	))
 
 	assetHandler := http.FileServer(getSwaggerUIFiles())
 	e.GET("/*", echo.WrapHandler(assetHandler))
+	println(banner)
 	e.Logger.Fatal(e.Start(*listenAddress))
 }
 
