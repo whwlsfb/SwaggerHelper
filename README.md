@@ -31,3 +31,4 @@ Arguments:
 
 `SwaggerHelper -F /to/path/api-docs.json -S http://1.2.3.4/api`
 
+启动完成后用浏览器访问监听地址即可。
