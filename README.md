@@ -1,6 +1,6 @@
 # SwaggerHelper
 
-SwaggerHelper是用于启动本地保存的api-docs.json文档的小工具，例如目标系统只开启了api-docs接口而没有开启Swagger-UI，或在对系统进行**二次**渗透测试时,若目标关闭了Swagger-UI，则可使用本工具在本地启动接口文档（前提是api-docs文档已离线保存在本地），直接调用目标接口。
+SwaggerHelper是用于启动本地保存的api-docs.json文档的小工具，例如目标系统只开启了api-docs接口而没有开启Swagger-UI，或在对系统进行**二次**渗透测试时目标关闭了该接口，则可使用本工具在本地启动接口文档（前提是api-docs文档已离线保存在本地），直接调用目标接口。
 
 # 编译
 
